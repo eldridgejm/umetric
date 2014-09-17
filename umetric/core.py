@@ -90,19 +90,69 @@ def linkage_ultrametric(distances, method="single"):
     return dendrogram_to_ultrametric(dendrogram)
 
 
+def non_ultrametric_triples(d):
+    """Returns all 3-tuples (i,j,k) for which d[i,j] < min(d[i,k], d[j,k]).
+    Assumes a symmetric input matrix."""
+    n = d.shape[0]
+    grid = _np.mgrid[:n, :n, :n]
+    inds = _np.column_stack(x.flatten() for x in grid)
+    
+    inds = inds[inds[:,0] < inds[:,1]]
+    inds = inds[inds[:,0] < inds[:,2]]
+    inds = inds[inds[:,1] < inds[:,2]]
+    
+    i,j,k = inds.T
+    
+    d_ij = d[i,j]
+    d_ik = d[i,k]
+    d_jk = d[j,k]
+    
+    non_um_inds = d_ij < _np.min(_np.column_stack((d_ik, d_jk)), axis=1)
+    non_um_inds = _np.logical_and(non_um_inds, d_ik != d_jk)
+    return inds[non_um_inds]
+
+
 def is_ultrametric(m):
-    """Given a metric matrix m, verifies the three-point condition. Naive
-    implementation takes O(n choose 3) time."""
+    """Given a metric matrix m, verifies the three-point condition."""
     n = m.shape[0]
 
     if not _np.allclose(_np.diag(m), 0):
         return False
+
+    if not _np.allclose(m, m.T):
+        return False
+
+    if non_ultrametric_triples(m).shape[0] > 0:
+        return False
     
-    for  i in xrange(n):
-        for j in xrange(n):
-            if m[i,j] > _np.min(_np.max(_np.column_stack((m[i], m[j])), 
-                                axis=0)):
-                return False
-            
     return True
 
+
+def enforce_ultrametricity(m, maxiters=10):
+    """Given an metric matrix m that is close to being an ultrametric, 
+    enforces ultrametricity by ensuring that for any set of points (i,j,k)
+    for which d_ij < min(d_ik, d_jk), we set d_ik = d_jk."""
+    q = m.copy()
+
+    triples = non_ultrametric_triples(q)
+    n = 0
+    while triples.shape[0] > 0:
+
+        if n >= maxiters:
+            raise RuntimeError("Exceeded maximum number of iterations.""")
+
+        i,j,k = triples.T
+        v = _np.min(_np.column_stack((q[i,k], q[j,k])), axis=1)
+        q[i,k] = q[j,k] = v
+
+        q = _np.triu(q, k=1)
+        q = q + q.T
+
+        triples = non_ultrametric_triples(q)
+
+        n += 1
+
+    return q
+
+
+    

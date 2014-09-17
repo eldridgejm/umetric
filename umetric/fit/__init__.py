@@ -1,5 +1,7 @@
 import numpy as _np
-from . import core as _core
+from .. import core as _core
+
+from _de_soete import closest_l_2_de_soete
 
 def closest_l_infinity(metric):
     """Find the optimal ultrametric in l-infinity."""
