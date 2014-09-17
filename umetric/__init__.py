@@ -1,5 +1,5 @@
-import fit
 import consensus
-import core
+import fit
+import random
 
 from .core import *
