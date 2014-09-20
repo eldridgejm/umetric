@@ -6,9 +6,7 @@ from _de_soete import closest_l_2_de_soete
 def closest_l_infinity(metric):
     """Find the optimal ultrametric in l-infinity."""
     m_star = _core.linkage_ultrametric(metric, method="single")
-    ultrametric = m_star + 1./2 * _np.max(metric - m_star)
-    ultrametric[_np.diag_indices_from(ultrametric)] = 0.
-    return ultrametric
+    return m_star + 1./2 * _np.max(metric - m_star)
 
 
 def closest_l_2_heuristic(metric):
@@ -17,10 +15,5 @@ def closest_l_2_heuristic(metric):
 
     # compute the average difference between the metric and the maximal 
     # subdominant ultrametric in the upper triangle of the matrix
-    inds = _np.triu_indices_from(metric)
-    alpha = (metric[inds] - m_star[inds]).mean()
-
-    ultrametric = m_star + alpha
-    ultrametric[_np.diag_indices_from(ultrametric)] = 0.
-
-    return ultrametric
+    alpha = (metric - m_star).mean()
+    return m_star + alpha

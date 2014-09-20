@@ -71,88 +71,97 @@ def dendrogram_to_ultrametric(dendrogram):
 
         t.node[u]['leafy_ancestors'] = ancestors
 
-    return ultrametric
+    return _distance.squareform(ultrametric)
 
 
 def ultrametric_to_dendrogram(ultrametric):
     """Computes the equivalent dendrogram of the ultrametric."""
-    condensed_distances = _distance.squareform(ultrametric)
-    slc = _hierarchy.linkage(condensed_distances, method='single')
+    slc = _hierarchy.linkage(ultrametric, method='single')
     return hierarchical_clustering_to_dendrogram(slc)
 
 
 def linkage_ultrametric(distances, method="single"):
     """Computes the ultrametric corresponding to the dendrogram produced by
-    the given linkage method."""
-    condensed_distances = _distance.squareform(distances)
-    clustering = _hierarchy.linkage(condensed_distances, method=method)
+    the given linkage method. 'distances' is a condensed metric."""
+    clustering = _hierarchy.linkage(distances, method=method)
     dendrogram = hierarchical_clustering_to_dendrogram(clustering)
     return dendrogram_to_ultrametric(dendrogram)
 
 
-def non_ultrametric_triples(d):
-    """Returns all 3-tuples (i,j,k) for which d[i,j] < min(d[i,k], d[j,k]).
-    Assumes a symmetric input matrix."""
-    n = d.shape[0]
-    grid = _np.mgrid[:n, :n, :n]
-    inds = _np.column_stack(x.flatten() for x in grid)
+def condensed_indices(n, ix):
+    """Converts the indices from (i,j) to their location in the condensed 
+    distance array."""
+    ix = _np.asarray(ix)
+    i = ix[:,0]
+    j = ix[:,1]
     
-    inds = inds[inds[:,0] < inds[:,1]]
-    inds = inds[inds[:,0] < inds[:,2]]
-    inds = inds[inds[:,1] < inds[:,2]]
+    return n*(n-1)/2 - (n-i)*(n-i-1)/2 + (j-i-1)
+
+
+def triangle_inequality_indices(n):
+    """Generates all triples of indices (i,j,k) such that it must be
+    that d_ij <= d_ik + d_jk."""
+    # generate all pairs
+    pairs = _np.column_stack(_np.triu_indices(n, k=1))
     
-    i,j,k = inds.T
+    ix,k = _np.indices((pairs.shape[0], n)).reshape((2,-1))
+    i,j = pairs[ix].T
     
-    d_ij = d[i,j]
-    d_ik = d[i,k]
-    d_jk = d[j,k]
+    triple_idx = (i != k) & (j != k)
     
-    non_um_inds = d_ij < _np.min(_np.column_stack((d_ik, d_jk)), axis=1)
-    non_um_inds = _np.logical_and(non_um_inds, d_ik != d_jk)
-    return inds[non_um_inds]
+    i = i[triple_idx]
+    j = j[triple_idx]
+    k = k[triple_idx]
+    
+    return i,j,k
+
+
+def non_ultrametric_triples(m):
+    """Returns triples of indices in the condensed metric for which it is not 
+    ultrametric."""
+    n = number_of_points(m.shape[0])
+    
+    # generate all indices to check
+    i,j,k = triangle_inequality_indices(n)
+    
+    # convert these to condensed matrix indices
+    ij = condensed_indices(n, i, j)
+    ik = condensed_indices(n, i, k)
+    jk = condensed_indices(n, j, k)
+    
+    lix = (m[ik] != m[jk]) & (m[ij] <= _np.minimum(m[ik], m[jk]))
+    return ij[lix], ik[lix], jk[lix]
 
 
 def is_ultrametric(m):
-    """Given a metric matrix m, verifies the three-point condition."""
-    n = m.shape[0]
+    ij, ik, jk = non_ultrametric_triples(m)
+    return ij.shape[0] == 0
 
-    if not _np.allclose(_np.diag(m), 0):
-        return False
 
-    if not _np.allclose(m, m.T):
-        return False
+def number_of_points(n):
+    """Given a number of pairwise distances, returns the number of points
+    in the dissimilarity."""
+    return int(1 + _np.sqrt(1 + 8*n))/2
 
-    if non_ultrametric_triples(m).shape[0] > 0:
-        return False
+
+def condensed_indices(n, i, j, upper=False):
+    """Returns the index of the (i,j) point in the condensed metric array."""
+    i = _np.asarray(i)
+    j = _np.asarray(j)
     
-    return True
+    if not upper:
+        i_old = i
+        j_old = j
+        
+        cond = i<j
+        i = _np.where(cond, i_old, j_old)
+        j = _np.where(cond, j_old, i_old)
+
+    return n*(n-1)/2 - (n-i)*(n-i-1)/2 + (j-i-1)
 
 
-def enforce_ultrametricity(m, maxiters=10):
-    """Given an metric matrix m that is close to being an ultrametric, 
-    enforces ultrametricity by ensuring that for any set of points (i,j,k)
-    for which d_ij < min(d_ik, d_jk), we set d_ik = d_jk."""
-    q = m.copy()
+def cophenetic_correlation(actual, approximate):
+    x = _np.asarray(actual)
+    y = _np.asarray(approximate)
 
-    triples = non_ultrametric_triples(q)
-    n = 0
-    while triples.shape[0] > 0:
-
-        if n >= maxiters:
-            raise RuntimeError("Exceeded maximum number of iterations.""")
-
-        i,j,k = triples.T
-        v = _np.min(_np.column_stack((q[i,k], q[j,k])), axis=1)
-        q[i,k] = q[j,k] = v
-
-        q = _np.triu(q, k=1)
-        q = q + q.T
-
-        triples = non_ultrametric_triples(q)
-
-        n += 1
-
-    return q
-
-
-    
+    return 1 - _np.sum((x - y)**2) / _np.sum((x - x.mean())**2)

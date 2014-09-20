@@ -8,8 +8,9 @@ setup(
     author="Justin Eldridge",
     author_email="eldridge@cse.ohio-state.edu",
 
-    packages=["umetric", "umetric.fit"],
+    packages=["umetric", "umetric.fit", "umetric.data"],
+    include_package_data=True,
 
-    install_requires = ["networkx", "scipy", "numpy"],
+    install_requires=["networkx", "scipy", "numpy"],
 )
 
