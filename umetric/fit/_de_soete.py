@@ -47,7 +47,7 @@ def shake_dissimilarity(d):
 
 
 def closest_l_2_de_soete(metric, maxiter=100, convergence=1e-6, d_init=None, 
-                         method="cg", method_options=None, mode="fast"):
+                         method="cg", method_options=None, objective="fast"):
     """Computes the closest ultrametric in l_2 by sequentially minimizing an
     unconstrained objective function."""
     n = metric.shape[0]
@@ -72,11 +72,14 @@ def closest_l_2_de_soete(metric, maxiter=100, convergence=1e-6, d_init=None,
 
     while True:
         # design the objective function to take a vector instead of a matrix
-        if mode == "fast":
+        if objective == "fast":
             ij, ik, jk = _core.non_ultrametric_triples(metric)
             obj = lambda x: loss(x, metric) + gamma*fast_penalty(x, ik, jk)
-        else:
+        elif objective == "exact":
             obj = lambda x: loss(x, metric) + gamma*penalty(x)
+        else:
+            raise RuntimeError("Invalid objective function '{}'.".format(
+                               objective))
 
         res = scipy.optimize.minimize(obj, d_init, method=method, 
                                       options=method_options)

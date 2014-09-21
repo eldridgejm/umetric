@@ -30,10 +30,10 @@ Consensus ultrametrics
 .. automodule:: umetric.consensus
    :members:
 
-Random metrics and ultrametrics
--------------------------------
+Datasets
+--------
 
-.. automodule:: umetric.random
+.. automodule:: umetric.data
     :members:
 
 Indices and tables
