@@ -226,12 +226,14 @@ def condensed_indices(n, i, j, upper=False):
     return n*(n-1)/2 - (n-i)*(n-i-1)/2 + (j-i-1)
 
 
-def cophenetic_correlation(actual, approximate):
-    x = _np.asarray(actual)
-    y = _np.asarray(approximate)
+def cophenetic_correlation(x, y):
+    x = _np.asarray(x)
+    y = _np.asarray(y)
 
-    return 1 - _np.sum((x - y)**2) / _np.sum((x - x.mean())**2)
-
+    d = _np.sqrt(_np.sum((x - x.mean())**2) * _np.sum((y - y.mean())**2))
+    n = _np.sum((x - x.mean())*(y - y.mean()))
+    
+    return n/d
 
 def rammal_ultrametricity(m):
     """Computes the Rammal ultrametricity degree."""
