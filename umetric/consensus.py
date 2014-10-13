@@ -1,4 +1,5 @@
 import numpy as _np
+import networkx as _nx
 
 def min_max_l_infinity(profile):
     """Minimizes the max l-infinity distance from the consensus to the
@@ -48,7 +49,7 @@ def tree_from_clusters(clusters):
     
     # the first entry is the root, and contains all leaf nodes
     clusters.extend((x,) for x in clusters[0])
-    tree = nx.DiGraph()
+    tree = _nx.DiGraph()
     root = clusters.pop(0)
     tree.add_node(root)
     
