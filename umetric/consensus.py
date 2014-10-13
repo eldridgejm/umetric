@@ -61,8 +61,8 @@ def tree_from_clusters(clusters):
         try:
             parent = min(candidates, key=len)
         except ValueError:
-            raise ValueError("No candidates. Perhaps the input clusters were
-                              not compatible?")
+            raise ValueError("No candidates. Perhaps the input clusters were "
+                             "not compatible?")
 
         tree.add_edge(parent, node)
         
