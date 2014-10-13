@@ -239,3 +239,16 @@ def rammal_ultrametricity(m):
     """Computes the Rammal ultrametricity degree."""
     msd = linkage_ultrametric(m, method='single')
     return _np.sum(m - msd) / _np.sum(m)
+
+def clusters(dendrogram):
+    """Generates all clusters of a dendrogram."""
+    leaf_nodes = set(node for node in dendrogram if 
+                     dendrogram.out_degree(node) == 0)
+    clusters = set()
+
+    for node in dendrogram:
+        leaf_descendents = _nx.descendants(dendrogram, node) & leaf_nodes
+        if leaf_descendents:
+            clusters.add(tuple(sorted(leaf_descendents)))
+        
+    return clusters
